@@ -16,7 +16,7 @@ class GrenniePhaser {
     {
         env.game.load.tilemap("map001", "assets/maps/map001.json", null, Phaser.Tilemap.TILED_JSON);
         env.game.load.image("tiles001", "assets/tiles/tiles001.png");
-        env.game.load.spritesheet("squab", "assets/sprites/squab.png", 64, 64, 14, 1, 1);
+        env.game.load.spritesheet("squab", "assets/sprites/squab3.png", 64, 64, 17, 1, 1);
     }
 
     create()
@@ -40,6 +40,7 @@ class GrenniePhaser {
         env.squab.sprite.animations.add("squat", [8,9, 10], 15, false);
         env.squab.sprite.animations.add("jump", [11], 1, false);
         env.squab.sprite.animations.add("fall", [12,13], 15, false);
+        env.squab.sprite.animations.add("jumpangle", [14,15,16], 15, false);
         env.squab.sprite.animations.play('idle');
 
         env.cursors = env.game.input.keyboard.createCursorKeys();
@@ -58,7 +59,9 @@ class GrenniePhaser {
     {
         env.game.physics.arcade.collide(env.squab.sprite, env.collisionLayer, this.collisionHandler);
 
-        env.squab.sprite.body.velocity.x = 0;
+        if (env.squab.action != 'clutchpop') {
+            env.squab.sprite.body.velocity.x = 0;
+        }
 
         if (!env.squab.tweening && !env.squab.clutchCooldown) {
             if (!env.squab.sprite.body.onFloor()) {
@@ -73,16 +76,46 @@ class GrenniePhaser {
                     return;
                 }
                 if (env.squab.clutched) {
-                    env.squab.sprite.body.moves = true;
-                    env.squab.clutched = null;
-                    env.squab.action = 'jump';
-                    env.squab.sprite.animations.play("jump");
-                    env.squab.sprite.body.velocity.y = -420;
-                    //console.log("unclutched by Jump");
-                    env.squab.clutchCooldown = true;
-                    setTimeout(function(){
-                        env.squab.clutchCooldown = false;
-                    }, 200);
+                    if (env.cursors.right.isDown && env.squab.clutched == "right") {
+                        env.squab.clutched = null;
+                        env.squab.sprite.body.moves = true;
+                        //console.log("unclutched by walkleft");
+                        env.squab.clutchCooldown = true;
+                        env.squab.action = 'clutchpop';
+                        env.squab.sprite.animations.play('jumpangle');
+                        env.squab.sprite.body.velocity.y = -370;
+                        env.squab.sprite.body.velocity.x = 200;
+                        setTimeout(function(){
+                            env.squab.clutchCooldown = false;
+                        }, 200);
+                    }
+                    else if (env.cursors.left.isDown && env.squab.clutched == "left") {
+                        env.squab.clutched = null;
+                        env.squab.sprite.body.moves = true;
+                        //console.log("unclutched by walkright");
+                        env.squab.clutchCooldown = true;
+                        env.squab.action = 'clutchpop';
+                        env.squab.sprite.animations.play('jumpangle');
+                        env.squab.sprite.body.velocity.y = -370;
+                        env.squab.sprite.body.velocity.x = -200;
+                        setTimeout(function(){
+                            env.squab.clutchCooldown = false;
+                        }, 200);
+                    } else {
+                        var popOffVelocity;
+                        env.squab.clutched == 'left' ? popOffVelocity = 20 : popOffVelocity = -20;
+                        env.squab.clutched = null;
+                        env.squab.sprite.body.moves = true;
+                        //console.log("unclutched by Jump");
+                        env.squab.clutchCooldown = true;
+                        env.squab.action = 'clutchpop';
+                        env.squab.sprite.animations.play("jumpangle");
+                        env.squab.sprite.body.velocity.y = -420;
+                        env.squab.sprite.body.velocity.x = popOffVelocity;
+                        setTimeout(function () {
+                            env.squab.clutchCooldown = false;
+                        }, 200);
+                    }
                 }
                 else {
                     // Jump
@@ -91,7 +124,12 @@ class GrenniePhaser {
                             env.squab.action = 'jump';
                             env.squab.sprite.animations.play("jump");
                             env.squab.sprite.body.velocity.y = -530;
-                        } else if (env.squab.action != 'prejump') {
+                        } else if (env.cursors.left.isDown || env.cursors.right.isDown) {
+                            env.squab.sprite.animations.play("jumpangle");
+                            env.squab.action = 'jump';
+                            env.squab.sprite.body.velocity.y = -445;
+                        } else if (env.squab.action != 'prejump' && env.squab.action != 'jump') {
+                            console.log("jump");
                             env.squab.action = 'prejump';
                             env.squab.sprite.animations.play("squat", 30);
                             setTimeout(function() {
@@ -99,7 +137,7 @@ class GrenniePhaser {
                                 env.squab.action = 'jump';
                                 env.squab.sprite.animations.play("jump");
                                 env.squab.sprite.body.velocity.y = -530;
-                            }, 100);
+                            }, 200);
                         }
                     }
                 }
@@ -115,15 +153,17 @@ class GrenniePhaser {
                     //console.log("unclutched by walkleft");
                     env.squab.clutchCooldown = true;
                     setTimeout(function(){
+                        env.squab.action = 'jump';
+                        env.squab.sprite.animations.play('jumpangle');
+                        env.squab.sprite.body.velocity.y = -420;
                         env.squab.clutchCooldown = false;
-                        env.squab.sprite.animations.play('jump');
                     }, 200);
                 }
                 else if (!env.squab.clutched) {
                     if (env.squab.sprite.scale.x > 0) {
                         env.squab.sprite.scale.x *= -1;
                     }
-                    if (env.squab.action != 'prejump' && env.squab.sprite.body.onFloor()) {
+                    if (env.squab.action != 'prejump' && env.squab.action != 'jump' && env.squab.sprite.body.onFloor()) {
                         env.squab.action = 'walk';
                         env.squab.sprite.animations.play('walk');
                     }
@@ -140,15 +180,17 @@ class GrenniePhaser {
                     //console.log("unclutched by walkright");
                     env.squab.clutchCooldown = true;
                     setTimeout(function(){
+                        env.squab.action = 'jump';
+                        env.squab.sprite.animations.play('jumpangle');
+                        env.squab.sprite.body.velocity.y = -420;
                         env.squab.clutchCooldown = false;
-                        env.squab.sprite.animations.play('jump');
                     }, 200);
                 }
                 else if (!env.squab.clutched) {
                     if (env.squab.sprite.scale.x < 0) {
                         env.squab.sprite.scale.x *= -1;
                     }
-                    if (env.squab.action != 'prejump' && env.squab.sprite.body.onFloor()) {
+                    if (env.squab.action != 'prejump' && env.squab.action != 'jump' && env.squab.sprite.body.onFloor()) {
                         env.squab.action = 'walk';
                         env.squab.sprite.animations.play('walk');
                     }
@@ -168,7 +210,6 @@ class GrenniePhaser {
                         env.squab.clutchCooldown = true;
                         setTimeout(function(){
                             env.squab.clutchCooldown = false;
-                            env.squab.sprite.animations.play('jump');
                         }, 200);
                     }
                 } else {
@@ -196,6 +237,7 @@ class GrenniePhaser {
         }
 
         // Hit tile from right.
+        console.log(env.squab.clutchCooldown);
         if ((tile.faceRight || tile.faceLeft) && tile.faceTop && !env.squab.clutchCooldown) {
             var tileFace;
             tile.faceLeft ? tileFace = 'left' : tileFace = 'right';
@@ -215,6 +257,7 @@ class GrenniePhaser {
 
             //console.log(tile.worldX,',',tile.worldY);
             var xDest;
+            // Is this the right-side of the tile?
             tileFace == 'right' ? xDest = tile.worldX-object.width-13 : xDest = tile.worldX-19;
             var dest = {
                 'x': xDest,
@@ -223,6 +266,7 @@ class GrenniePhaser {
             env.squab.sprite.body.moves = false;
             env.squab.action = 'clutched';
             env.squab.clutched = (tileFace == 'right' ? 'left' : 'right');
+            console.log("Is clutched", env.squab.clutched);
             env.squab.tweening = true;
             //console.log("Clutching to ", dest);
             env.squab.sprite.animations.play("clutch");
